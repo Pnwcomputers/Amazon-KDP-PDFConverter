@@ -68,7 +68,7 @@ Chapter 1/
   001_Intro.md
   010_Info.md
 PDF_Book_Name/
-  005_Chapter5.md
+  Name_of_the_Book.md
 Appendices/
   A_Appendix.md
 images/
