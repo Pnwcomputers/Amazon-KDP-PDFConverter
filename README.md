@@ -49,12 +49,11 @@ Expected console output includes:
 
 The script searches these folders at the repo root (exact names):
 
-- `Part I - Computer Fundamentals`
+- `Chapter 1`
 - `PDF_Book_Name`
-- `Part III - Computer Maintenance & Care`
-- `Part V - Networking & Connectivity`
-- `Part VI - Account Management & Recovery`
-- `Part VII - Practical Tips & Advanced Basics`
+- `Chapter 2`
+- `Chapter 3`
+- `Chapter 4`
 - `Appendices`
 
 ### 📌 How files are collected
@@ -65,13 +64,13 @@ The script searches these folders at the repo root (exact names):
 
 Example:
 ~~~text
-Part I - Computer Fundamentals/
+Chapter 1/
   001_Intro.md
-  010_Hardware_Basics.md
+  010_Info.md
 PDF_Book_Name/
-  005_Scams.md
+  005_Chapter5.md
 Appendices/
-  A_Troubleshooting.md
+  A_Appendix.md
 images/
   diagram.png
 build_a4_kdp.py
@@ -161,7 +160,7 @@ So image references should resolve from the repo root.
 
 ### ✅ Recommended image patterns
 - `![Alt](images/diagram.png)`
-- `![Alt](PDF_Book_Name/images/phishing.png)`
+- `![Alt](PDF_Book_Name/images/picture.png)`
 
 ### 🚫 Avoid (if you can)
 - Absolute paths like `/images/foo.png`
