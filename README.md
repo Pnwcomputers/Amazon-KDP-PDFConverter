@@ -1,68 +1,67 @@
-# A4 KDP PDF Builder (Pandoc + XeLaTeX)
+# 📘 Amazon KDP PDF Conversion Python Script (Size A4)
 
-This repository includes a Python build script that compiles multiple Markdown chapters into a single, print-focused PDF sized for Amazon KDP paperback on A4 (210mm × 297mm).
+# 🧱 Print-Ready PDF Pipeline (Pandoc + XeLaTeX)
+## Compiles a multi-part Markdown book into an Amazon KDP-friendly **A4 (210×297mm)** paperback PDF
+### Built for real-world publishing pain: margins, image scaling, code overflow, and deterministic chapter ordering
+---
 
-It is designed to reduce common KDP preflight issues like:
-- images drifting outside margins
-- long code lines overflowing the page width
-- inconsistent image path references across folders
+## 🎯 START HERE
 
-## What it does
+### ✅ **What this repo does**
+This repo contains a Python build script that:
+- Collects Markdown chapters from your book folder structure
+- Preprocesses Markdown to reduce PDF/KDP formatting failures
+- Builds a single **A4 paperback-ready PDF** using **Pandoc + XeLaTeX**
+- Outputs your final PDF to `./build/`
 
-- Walks a defined set of “Part” folders (in a specific order)
-- Finds all .md files (recursively) and sorts them
-- Preprocesses Markdown:
-  - removes/neutralizes YAML frontmatter delimiters
-  - converts HTML <img> tags to Markdown image syntax
-  - fixes common image path issues (URL decoding, removes ../../)
-  - removes zero-width spaces
-  - hard-wraps long lines inside fenced code blocks
-- Builds a PDF using Pandoc + XeLaTeX
-- Writes the finished PDF to ./build/
+### 📄 Output file
+- `build/The_Computer_Handbook_A4_KDP.pdf`
 
-## Output
+---
 
-- Default PDF name:
-  - build/The_Computer_Handbook_A4_KDP.pdf
+## 🚀 QUICK BUILD
 
-## Requirements
+### 1) Install dependencies
+You need:
+- **Python 3.8+**
+- **Pandoc**
+- **XeLaTeX** (via MiKTeX / TeX Live / MacTeX)
 
-### 1) Python
-- Python 3.8+ recommended
-
-### 2) Pandoc
-- Pandoc must be installed and available in your PATH
-- Verify:
-  ~~~bash
-  pandoc --version
-  ~~~
-
-### 3) XeLaTeX (TeX Distribution)
-You need a TeX distribution that provides xelatex.
-
-Common options:
-- Windows: MiKTeX or TeX Live
-- macOS: MacTeX
-- Linux: TeX Live packages (including xelatex)
-
-Verify:
+### 2) Run the build (from repo root)
 ~~~bash
-xelatex --version
+python3 build_a4_kdp.py
 ~~~
 
-## Repository structure (expected)
+Windows alternative:
+~~~powershell
+py build_a4_kdp.py
+~~~
+
+Expected console output includes:
+- `Build Mode: A4 KDP Paperback (210x297mm)`
+- `+ Prepared: <chapter.md>`
+- `>> Running Pandoc/XeLaTeX Build...`
+- `SUCCESS! A4 PDF created at: build/The_Computer_Handbook_A4_KDP.pdf`
+
+---
+
+## 🗂️ REQUIRED REPO STRUCTURE
 
 The script searches these folders at the repo root (exact names):
 
-- Part I - Computer Fundamentals
-- Part II - Internet Safety & Cybersecurity
-- Part III - Computer Maintenance & Care
-- Part V - Networking & Connectivity
-- Part VI - Account Management & Recovery
-- Part VII - Practical Tips & Advanced Basics
-- Appendices
+- `Part I - Computer Fundamentals`
+- `Part II - Internet Safety & Cybersecurity`
+- `Part III - Computer Maintenance & Care`
+- `Part V - Networking & Connectivity`
+- `Part VI - Account Management & Recovery`
+- `Part VII - Practical Tips & Advanced Basics`
+- `Appendices`
 
-Each folder may contain subfolders. The script will recursively include every .md file it finds.
+### 📌 How files are collected
+- Recursively scans each part folder
+- Includes `*.md` files only
+- Sorts filenames alphabetically within each folder tree
+- Prefixes prepared files with a counter (`001_`, `002_`, etc.) to force deterministic order in Pandoc
 
 Example:
 ~~~text
@@ -78,160 +77,197 @@ images/
 build_a4_kdp.py
 ~~~
 
-## Running the build
+---
 
-Run from the repo root so resource paths resolve correctly:
+## 🧠 WHAT THE SCRIPT DOES (UNDER THE HOOD)
 
-~~~bash
-python3 build_a4_kdp.py
-~~~
+### ✅ Stage 1 — Preprocess Markdown (KDP/PDF hardening)
+The function `preprocess_markdown()` performs:
 
-On Windows (depending on your environment):
-
-~~~powershell
-py build_a4_kdp.py
-~~~
-
-You should see logs like:
-- Build Mode: A4 KDP Paperback (210x297mm)
-- + Prepared: filename.md
-- >> Running Pandoc/XeLaTeX Build...
-- SUCCESS! A4 PDF created at: ./build/The_Computer_Handbook_A4_KDP.pdf
-
-## Configuration
-
-Edit these constants near the top of the script:
-
-- BOOK_TITLE
-- BOOK_AUTHOR
-- PDF_OUTPUT
-
-Margins (A4 trim, KDP-style layout) are controlled here:
-
-- INNER_MARGIN (default 25mm)
-- OUTER_MARGIN (default 20mm)
-- TOP_BOTTOM (default 20mm)
-
-If KDP Preview flags margin issues, these values are the first place to adjust.
-
-## How Markdown is preprocessed (important)
-
-The script applies several transformations to make Pandoc + print layout more reliable.
-
-### 1) YAML frontmatter delimiter neutralization
+#### 1) YAML Frontmatter Neutralization
 Any line that is exactly:
-- ---
+- `---`
 
-Is replaced with:
-- ***
+Gets replaced with:
+- `***`
 
-This helps avoid Pandoc YAML parsing behavior if frontmatter isn’t intended or is malformed.
+This prevents Pandoc from interpreting unintended YAML frontmatter boundaries.
 
-### 2) Convert HTML <img> tags to Markdown images
+#### 2) HTML <img> → Markdown image conversion
 Example:
-- <img src="images/foo.png">
+- `<img src="images/foo.png">`
 
 Becomes:
-- ![](images/foo.png)
+- `![](images/foo.png)`
 
-### 3) Image path normalization
-For Markdown images like:
-- ![alt](../../images/My%20Image.png)
+#### 3) Image path normalization (critical)
+For Markdown images:
+- `![Alt](../../images/My%20Image.png)`
 
 The script:
-- URL-decodes %20 into spaces
-- removes leading ../ sequences so paths resolve from repo root
-- strips leading /
+- URL-decodes `%20` → space
+- strips leading `../` segments so lookup becomes repo-root relative
+- removes leading `/`
 
-So the example becomes:
-- ![alt](images/My Image.png)
+Result:
+- `![Alt](images/My Image.png)`
 
-### 4) Removes zero-width spaces
-These invisible characters can cause weird formatting and copy/paste artifacts:
-- \u200B
+#### 4) Zero-width space removal
+Removes:
+- `\u200B`
 
-### 5) Wraps long code lines inside fenced code blocks
-Inside triple-backtick fenced code blocks in the source Markdown, lines longer than ~75 characters are hard-wrapped to reduce layout overflow.
+#### 5) Code block hard-wrapping
+Inside fenced code blocks, lines longer than ~75 characters are hard-wrapped to reduce page overflow.
 
-Note:
-- This is a pragmatic print-layout fix, but it can change how code appears (line breaks). For publication, prefer writing code examples with reasonable line lengths.
+---
 
-## Images: best practices
+## 🧾 PDF BUILD CONFIGURATION
 
-Because the build runs with:
-- --resource-path=<repo_root>
+### 📕 Book metadata
+Set in the script:
+- `BOOK_TITLE`
+- `BOOK_AUTHOR`
+- `PDF_OUTPUT`
 
-Your images should be referenced as paths that resolve from the repository root.
+Defaults:
+- `BOOK_TITLE = "The Computer Handbook"`
+- `BOOK_AUTHOR = "Jon-Eric Pienkowski"`
+- `PDF_OUTPUT = "The_Computer_Handbook_A4_KDP.pdf"`
 
-Recommended patterns:
-- ![Alt text](images/diagram.png)
-- ![Alt text](Part II - Internet Safety & Cybersecurity/images/phishing.png)
+### 📐 KDP A4 geometry (210mm × 297mm)
+Margins set in the script:
+- `INNER_MARGIN = "25mm"`
+- `OUTER_MARGIN = "20mm"`
+- `TOP_BOTTOM = "20mm"`
 
-Avoid:
-- absolute paths like /images/diagram.png
-- fragile deep paths like ../../../images/diagram.png (the script tries to fix these, but correctness depends on your real folder layout)
+If KDP preview complains about margins or bleed, these are your first knobs to turn.
 
-## Troubleshooting
+### 🧷 LaTeX safety features included
+Injected via `header.tex`:
+- `geometry` configured for exact A4
+- `fancyhdr` headers (title + page)
+- image constraint rules (max width/height with aspect ratio)
+- figure locking to reduce float chaos
+- code wrapping and sloppy stretch to reduce overfull boxes
 
-### Pandoc not found
-Symptom:
-- pandoc: command not found
+---
+
+## 🖼️ IMAGES: HOW TO NOT GET BURNED
+
+Pandoc runs with:
+- `--resource-path=<repo_root>`
+
+So image references should resolve from the repo root.
+
+### ✅ Recommended image patterns
+- `![Alt](images/diagram.png)`
+- `![Alt](Part II - Internet Safety & Cybersecurity/images/phishing.png)`
+
+### 🚫 Avoid (if you can)
+- Absolute paths like `/images/foo.png`
+- Deep relative paths like `../../../images/foo.png` (the script attempts to rewrite these, but correctness depends on your real layout)
+
+---
+
+## 🧯 TROUBLESHOOTING (COMMON FAILURES)
+
+### ❌ `pandoc: command not found`
+Cause: Pandoc not installed or not on PATH.
 
 Fix:
 - Install Pandoc
-- Ensure it’s in PATH
-- Reopen your terminal after installation
+- Reopen terminal
+- Verify:
+~~~bash
+pandoc --version
+~~~
 
-### XeLaTeX not found (or LaTeX package errors)
-Symptom:
-- xelatex not found
-- LaTeX Error: File `...` not found
+### ❌ `xelatex not found` / LaTeX package errors
+Cause: TeX distribution missing or incomplete.
 
 Fix:
-- Install a TeX distribution (MiKTeX / TeX Live / MacTeX)
-- On MiKTeX, allow on-the-fly package installs or install missing packages manually
-- Confirm xelatex works in a fresh terminal
+- Install MiKTeX / TeX Live / MacTeX
+- Verify:
+~~~bash
+xelatex --version
+~~~
+- If MiKTeX prompts for missing packages, allow install (or install manually)
 
-### Images not rendering in the PDF
+### ❌ Images missing in the PDF
 Fix checklist:
-- Confirm the referenced image file exists at the expected path
-- Confirm the path resolves from repo root (or is correctly rewritten by the script)
-- Avoid exotic characters in file names if possible
-- Prefer consistent image directory organization (e.g., a top-level images/ folder)
+- Confirm the image file exists where the Markdown ultimately points (repo-root relative)
+- Watch for filename mismatches (case sensitivity on Linux/macOS)
+- Avoid weird characters in filenames when possible
+- Ensure spaces are handled consistently (`%20` decoding is supported)
 
-### KDP “outside the margins” warnings
-Common causes:
-- images too large or floating unpredictably
-- long unbroken text strings (URLs, code, hashes)
-- tables wider than the text area
+### ❌ KDP warns: “Text/Image outside margins”
+Likely causes:
+- an image is too large
+- a table is too wide
+- a long unbroken string (URLs, hashes, code, base64) is overflowing
 
-Mitigations included in this script:
-- images constrained via \setkeys{Gin}{width=..., height=..., keepaspectratio}
-- figures forced to [H] to prevent float drift
-- code blocks break lines and shrink font
-- sloppy/emergency stretch enabled to reduce overfull boxes
+Fixes:
+- reduce image dimensions at source
+- manually break long URLs/strings in Markdown
+- simplify tables or convert to multi-line lists
+- keep code examples reasonably line-limited
 
-If warnings persist:
-- reduce image sizes at the source
-- manually break long strings in Markdown
-- simplify wide tables (or use longtable formatting intentionally)
+---
 
-## Notes on build behavior
+## 📦 BUILD ARTIFACTS
 
-- The build output directory is created at:
-  - ./build
-- A temporary directory is created for the prepared Markdown + header.tex
-- Prepared chapter files are renamed with a numeric prefix:
-  - 001_filename.md, 002_filename.md, etc.
-This ensures a deterministic compile order based on the script’s folder order and the alphabetical sort of filenames within each folder tree.
+- Final PDF:
+  - `./build/The_Computer_Handbook_A4_KDP.pdf`
+- Temporary build directory:
+  - created automatically (contains prepared Markdown + `header.tex`)
+  - location is printed during build
 
-## License
+---
 
-Choose what fits your goals:
-- MIT (for the build script)
-- Proprietary (if you want to keep the publishing pipeline private)
-- Dual approach: script permissive, book content copyrighted
+## 🧪 ADVANCED NOTES (OPTIONAL)
 
-## Author
+### Deterministic ordering
+Folder order is hard-coded in `parts_structure`. Within each part, files are sorted alphabetically.
+Recommendation:
+- Use numeric prefixes in filenames (e.g., `001_`, `010_`, `120_`) to lock order forever.
+
+### Font handling
+XeLaTeX is used for better font support and fewer Unicode headaches than pdfLaTeX.
+
+---
+
+## ⚖️ LEGAL / PUBLISHING DISCLAIMER
+
+This build pipeline produces a PDF. You are responsible for:
+- verifying layout in KDP Preview
+- ensuring you have rights to all included content (text/images)
+- complying with Amazon KDP print requirements
+
+---
+
+## 🙏 CREDITS
+
+### 🧰 Toolchain
+- **Pandoc** — Markdown-to-PDF conversion engine
+- **XeLaTeX** — Unicode-friendly LaTeX engine
+- **LaTeX packages** used include:
+  - `geometry`, `graphicx`, `fancyhdr`, `longtable`, `booktabs`, `fvextra`, `float`
+
+---
+
+## 👤 AUTHOR
 
 - Jon-Eric Pienkowski
+- Pacific Northwest Computers
+
+---
+
+## ✅ TL;DR
+
+1) Put your chapters into the required Part folders  
+2) Run:
+~~~bash
+python3 build_a4_kdp.py
+~~~
+3) Grab your PDF here:
+- `build/The_Computer_Handbook_A4_KDP.pdf`
