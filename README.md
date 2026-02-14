@@ -130,7 +130,7 @@ Set in the script:
 - `PDF_OUTPUT`
 
 Defaults:
-- `BOOK_TITLE = "The Computer Handbook"`
+- `BOOK_TITLE = "The Book's Title"`
 - `BOOK_AUTHOR = "Jon-Eric Pienkowski"`
 - `PDF_OUTPUT = "PDF_Book_Name.pdf"`
 
