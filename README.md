@@ -15,7 +15,7 @@ This repo contains a Python build script that:
 - Outputs your final PDF to `./build/`
 
 ### 📄 Output file
-- `build/The_Computer_Handbook_A4_KDP.pdf`
+- `build/Book_Name.pdf`
 
 ---
 
@@ -41,7 +41,7 @@ Expected console output includes:
 - `Build Mode: A4 KDP Paperback (210x297mm)`
 - `+ Prepared: <chapter.md>`
 - `>> Running Pandoc/XeLaTeX Build...`
-- `SUCCESS! A4 PDF created at: build/The_Computer_Handbook_A4_KDP.pdf`
+- `SUCCESS! A4 PDF created at: build/PDF_Book_Name.pdf`
 
 ---
 
@@ -50,7 +50,7 @@ Expected console output includes:
 The script searches these folders at the repo root (exact names):
 
 - `Part I - Computer Fundamentals`
-- `Part II - Internet Safety & Cybersecurity`
+- `PDF_Book_Name`
 - `Part III - Computer Maintenance & Care`
 - `Part V - Networking & Connectivity`
 - `Part VI - Account Management & Recovery`
@@ -68,7 +68,7 @@ Example:
 Part I - Computer Fundamentals/
   001_Intro.md
   010_Hardware_Basics.md
-Part II - Internet Safety & Cybersecurity/
+PDF_Book_Name/
   005_Scams.md
 Appendices/
   A_Troubleshooting.md
@@ -132,7 +132,7 @@ Set in the script:
 Defaults:
 - `BOOK_TITLE = "The Computer Handbook"`
 - `BOOK_AUTHOR = "Jon-Eric Pienkowski"`
-- `PDF_OUTPUT = "The_Computer_Handbook_A4_KDP.pdf"`
+- `PDF_OUTPUT = "PDF_Book_Name.pdf"`
 
 ### 📐 KDP A4 geometry (210mm × 297mm)
 Margins set in the script:
@@ -161,7 +161,7 @@ So image references should resolve from the repo root.
 
 ### ✅ Recommended image patterns
 - `![Alt](images/diagram.png)`
-- `![Alt](Part II - Internet Safety & Cybersecurity/images/phishing.png)`
+- `![Alt](PDF_Book_Name/images/phishing.png)`
 
 ### 🚫 Avoid (if you can)
 - Absolute paths like `/images/foo.png`
@@ -217,7 +217,7 @@ Fixes:
 ## 📦 BUILD ARTIFACTS
 
 - Final PDF:
-  - `./build/The_Computer_Handbook_A4_KDP.pdf`
+  - `./build/PDF_Book_Name.pdf`
 - Temporary build directory:
   - created automatically (contains prepared Markdown + `header.tex`)
   - location is printed during build
