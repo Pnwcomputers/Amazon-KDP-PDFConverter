@@ -270,4 +270,4 @@ This build pipeline produces a PDF. You are responsible for:
 python3 build_a4_kdp.py
 ~~~
 3) Grab your PDF here:
-- `build/The_Computer_Handbook_A4_KDP.pdf`
+- `build/The_Name.pdf`
