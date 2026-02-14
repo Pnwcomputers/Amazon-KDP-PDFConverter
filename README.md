@@ -1,8 +1,8 @@
 # 📘 Amazon KDP PDF Conversion Python Script (Size A4)
 
-# 🧱 Print-Ready PDF Pipeline (Pandoc + XeLaTeX)
-## Compiles a multi-part Markdown book into an Amazon KDP-friendly **A4 (210×297mm)** paperback PDF
-### Built for real-world publishing pain: margins, image scaling, code overflow, and deterministic chapter ordering
+## 🧱 Print-Ready PDF Pipeline (Pandoc + XeLaTeX)
+### Compiles a multi-part Markdown book into an Amazon KDP-friendly **A4 (210×297mm)** paperback PDF
+#### Built for real-world publishing pain: margins, image scaling, code overflow, and deterministic chapter ordering
 ---
 
 ## 🎯 START HERE
