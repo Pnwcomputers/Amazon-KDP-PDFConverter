@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 import os
 import re
-import sys
 import shutil
 import tempfile
 import subprocess
@@ -107,6 +106,18 @@ APPENDICES = [
     "Appendices/AppendixD-GlossaryofTechnicalTerms.md",
 ]
 
+
+def resolve_executable(configured_path, fallback_name):
+    """Resolve executable from configured absolute path or PATH fallback."""
+    if configured_path and os.path.isfile(configured_path):
+        return configured_path
+
+    from_path = shutil.which(fallback_name)
+    if from_path:
+        return from_path
+
+    return None
+
 def natural_keys(text):
     return [int(c) if c.isdigit() else c.lower() for c in re.split(r'(\d+)', text)]
 
@@ -173,7 +184,9 @@ def preprocess_markdown(content):
     #    resolve relative to --resource-path (the repo root).
     def fix_match(match):
         alt, raw_path = match.group(1), match.group(2)
-        clean = re.sub(r'^(\.\./)+', '', raw_path).lstrip('/')
+        clean = raw_path.strip().strip('\"\'')
+        clean = unquote(clean)
+        clean = re.sub(r'^(\.\./)+', '', clean).lstrip('/')
         return f"![{alt}]({clean})"
     content = re.sub(r'!\[([^\]]*)\]\(([^)]+)\)', fix_match, content)
 
@@ -188,6 +201,15 @@ def preprocess_markdown(content):
     return wrap_code_smart(content, max_width=75)
 
 def main():
+    pandoc_cmd = resolve_executable(PANDOC_BIN, "pandoc")
+    xelatex_cmd = resolve_executable(XELATEX_BIN, "xelatex")
+    if not pandoc_cmd or not xelatex_cmd:
+        print("[!] ERROR: Missing required tools.")
+        print(f"    - pandoc:  {'FOUND' if pandoc_cmd else 'NOT FOUND'}")
+        print(f"    - xelatex: {'FOUND' if xelatex_cmd else 'NOT FOUND'}")
+        print("    Update PANDOC_BIN / XELATEX_BIN or install both tools on PATH.")
+        return 1
+
     repo_root = os.path.abspath(os.getcwd())
     output_dir = os.path.join(repo_root, "build")
     os.makedirs(output_dir, exist_ok=True)
@@ -253,7 +275,7 @@ def main():
 
         if not prepared_files:
             print("\n[!] ERROR: No files processed.")
-            return
+            return 1
 
         header_path = os.path.join(build_temp, "header.tex")
         with open(header_path, 'w', encoding='utf-8') as f:
@@ -279,10 +301,10 @@ def main():
         # The -H header must NOT load geometry again.
         # ──────────────────────────────────────────
         cmd = [
-            PANDOC_BIN, *prepared_files,
+            pandoc_cmd, *prepared_files,
             "-f", "markdown-yaml_metadata_block",
             "--metadata-file", meta_path,
-            f"--pdf-engine={XELATEX_BIN}",
+            f"--pdf-engine={xelatex_cmd}",
             f"--resource-path={repo_root}",
             "-H", header_path,
             "--toc",
@@ -313,12 +335,14 @@ def main():
         if result.returncode != 0:
             print("\n[!] BUILD FAILED. LATEX LOG:")
             print(result.stderr)
+            return result.returncode
         else:
             print(f"\n[OK] A4 PDF generated at:\n{output_pdf}")
+            return 0
 
     finally:
         shutil.rmtree(build_temp, ignore_errors=True)
         print("  * Temporary workspace cleared.")
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
