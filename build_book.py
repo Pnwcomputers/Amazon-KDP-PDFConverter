@@ -5,15 +5,15 @@ import sys
 import shutil
 import tempfile
 import subprocess
-from pathlib import Path
 from urllib.parse import unquote
 
 # ──────────────────────────────────────────────
 # BOOK METADATA
 # ──────────────────────────────────────────────
-BOOK_TITLE = "The Computer Handbook"
-BOOK_AUTHOR = "Jon-Eric Pienkowski"
-PDF_OUTPUT = "The_Computer_Handbook_A4_KDP.pdf"
+BOOK_TITLE = "The Book Title"
+BOOK_SUBTITLE = "Replace with your subheading"
+BOOK_AUTHOR = "Author"
+PDF_OUTPUT = "Book_Name_A4_KDP.pdf"
 
 # ──────────────────────────────────────────────
 # KDP A4 GEOMETRY (210mm x 297mm)
@@ -29,6 +29,7 @@ LATEX_HEADER = r"""
 \usepackage{booktabs}
 \usepackage{longtable}
 \usepackage{fancyhdr}
+\usepackage{xurl} 
 
 % 1. INDEPENDENT IMAGE CONSTRAINTS
 \makeatletter
@@ -39,60 +40,87 @@ LATEX_HEADER = r"""
 \makeatother
 \setkeys{Gin}{width=\kdpmaxwidth,height=\kdpmaxheight,keepaspectratio}
 
-% 2. FIGURE LOCKING
+% 2. FIGURE LOCKING (Prevents bottom-margin overflow)
 \let\origfigure\figure
 \let\origendfigure\endfigure
 \renewenvironment{figure}[1][H]{\origfigure[H]}{\origendfigure}
 
-% 3. TEXT WRAPPING
-\fvset{breaklines=true,breakanywhere=true,fontsize=\footnotesize}
+% 3. TEXT WRAPPING & TABLE FIX
+% Forces longtables to respect text width and prevents squishing
+\usepackage{array}
+\newcolumntype{L}[1]{>{\raggedright\let\newline\\\arraybackslash\hspace{0pt}}p{#1}}
 \sloppy
 \setlength{\emergencystretch}{3em}
 
-% 4. A4 GEOMETRY (Exact KDP Trim)
+% 4. A4 GEOMETRY
 \usepackage[paperwidth=210mm,paperheight=297mm,
             inner=""" + INNER_MARGIN + r""",outer=""" + OUTER_MARGIN + r""",
             top=""" + TOP_BOTTOM + r""",bottom=""" + TOP_BOTTOM + r""",
-            footskip=12mm,headsep=10mm,headheight=14pt]{geometry}
+            footskip=12mm,headsep=10mm,headheight=15pt]{geometry}
 
 % 5. HEADERS
 \pagestyle{fancy}
 \fancyhf{}
 \fancyhead[LE,RO]{\thepage}
-\fancyhead[RE]{\textit{The Computer Handbook}}
+\fancyhead[RE]{\textit{The Book Title}}
 \renewcommand{\headrulewidth}{0.4pt}
 \providecommand{\tightlist}{\setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
 """
 
+# EXACT CHAPTER ORDER - NO AUTOMATED CRAWLING
+PARTS = [
+    {"folder": "Part I - Computer Fundamentals", "title": "Part I: Computer Fundamentals", "subtitle": "The essential building blocks of your computer and system setup.",
+     "chapters": [
+         "Part I - Computer Fundamentals/Chapter 1 - Understanding Your Computer/Chapter1_Understanding_Your_Computer.md",
+         "Part I - Computer Fundamentals/Chapter 2 - Operating Systems Basics/Chapter2-Operating_Systems_Basics.md",
+         "Part I - Computer Fundamentals/Chapter 3 - Setting Up a New Computer/Chapter3-Setting_Up_a_New_Computer.md",
+     ]},
+    {"folder": "Part II - Internet Safety & Cybersecurity", "title": "Part II: Internet Safety & Cybersecurity", "subtitle": "Recognizing modern threats and implementing a strong defensive posture.",
+     "chapters": [
+         "Part II - Internet Safety & Cybersecurity/Chapter 4 - Understanding Cyber Threats/Chapter4-Understanding_Cyber_Threats.md",
+         "Part II - Internet Safety & Cybersecurity/Chapter 5 - Protecting Yourself Online/Chapter5-Protecting_Yourself_Online.md",
+         "Part II - Internet Safety & Cybersecurity/Chapter 6 - Antivirus and Security Software/Chapter6-Antivirus_and_Security_Software.md",
+         "Part II - Internet Safety & Cybersecurity/Chapter 7 - What to Do If You're Infected/Chapter7-WhattoDo_IfYoure_Infected.md",
+     ]},
+    {"folder": "Part III - Computer Maintenance & Care", "title": "Part III: Computer Maintenance & Care", "subtitle": "Professional procedures for cleaning, troubleshooting, and hardware diagnosis.",
+     "chapters": [
+         "Part III - Computer Maintenance & Care/Chapter 8 - Keeping Your Computer Healthy/Chapter8-Keeping_Your_Computer_Healthy.md",
+         "Part III - Computer Maintenance & Care/Chapter 9 - Data Backup Essentials/Chapter9-Data_Backup_Essentials.md",
+         "Part III - Computer Maintenance & Care/Chapter 10 - Basic Troubleshooting/Chapter10-Basic_Troubleshooting.md",
+         "Part III - Computer Maintenance & Care/Chapter 11 - Understanding Hardware Problems/Chapter11-UnderstandingHardwareProblems.md",
+         "Part III - Computer Maintenance & Care/Chapter 12 - Basic Hardware Maintenance/Chapter12-BasicHardwareMaintenance.md",
+     ]},
+    {"folder": "Part V - Networking & Connectivity", "title": "Part IV: Networking & Connectivity", "subtitle": "Home network, peripherals, and connections.",
+     "chapters": [
+         "Part V - Networking & Connectivity/Chapter 13 - Home Network Basics/Chapter13-HomeNetworkBasics.md",
+         "Part V - Networking & Connectivity/Chapter 14 - Internet Troubleshooting/Chapter14-InternetTroubleshooting.md",
+         "Part V - Networking & Connectivity/Chapter 15 - Printer and Peripheral Setup/Chapter15-PrinterandPeripheralSetup.md",
+     ]},
+    {"folder": "Part VI - Account Management & Recovery", "title": "Part V: Account Management & Recovery", "subtitle": "Digital identity management.",
+     "chapters": [
+         "Part VI - Account Management & Recovery/Chapter 16 - Managing Online Accounts/Chapter16-ManagingOnlineAccounts.md",
+         "Part VI - Account Management & Recovery/Chapter 17 - When Things Go Wrong/Chapter17-WhenThingsGoWrong.md",
+     ]},
+    {"folder": "Part VII - Practical Tips & Advanced Basics", "title": "Part VI: Practical Tips & Advanced Basics", "subtitle": "Lasting performance.",
+     "chapters": [
+         "Part VII - Practical Tips & Advanced Basics/Chapter 18 - Software Management/Chapter18-SoftwareManagement.md",
+         "Part VII - Practical Tips & Advanced Basics/Chapter 19 - Performance Optimization/Chapter19-PerformanceOptimization.md",
+         "Part VII - Practical Tips & Advanced Basics/Chapter 20 - Planning for the Future/Chapter20-PlanningfortheFuture.md",
+     ]}
+]
+
 def preprocess_markdown(content):
-    # 1. Aggressive YAML Frontmatter Removal
-    content = re.sub(r'(?m)^---\s*$', '***', content)
-    
-    # 2. Convert HTML <img> to MD
+    content = re.sub(r'\A\s*---\s*\n.*?\n---(?:\s*\n|$)', '', content, flags=re.DOTALL)
     content = re.sub(r'<img\s+[^>]*src="([^"]+)"[^>]*>', r'![](\1)', content)
-    
-    # 3. FIX IMAGE PATHS (CRITICAL FOR IMAGES TO RENDER)
     def fix_match(match):
-        alt = match.group(1)
-        raw_path = match.group(2)
-        clean = unquote(raw_path)               # Removes %20 URL encoding
-        clean = re.sub(r'^(\.\./)+', '', clean) # Strips ../../ so it searches repo root
-        clean = clean.lstrip('/')
+        alt, raw_path = match.group(1), match.group(2)
+        clean = re.sub(r'^(\.\./)+', '', raw_path).lstrip('/')
         return f"![{alt}]({clean})"
     content = re.sub(r'!\[([^\]]*)\]\(([^)]+)\)', fix_match, content)
-
-    # 4. Remove Zero-Width Spaces
     content = content.replace('\u200B', '')
-    
-    # 5. Wrap code blocks for A4 width
-    lines = content.split('\n')
-    res, in_block = [], False
-    for l in lines:
-        if l.strip().startswith('```'): in_block = not in_block
-        if in_block and len(l) > 75:
-            res.append('\n'.join([l[i:i+75] for i in range(0, len(l), 75)]))
-        else: res.append(l)
-    return '\n'.join(res)
+    content = re.sub(r'^#{2,}\s*(Chapter\s+\d+.*)$', r'# \1', content, flags=re.MULTILINE | re.IGNORECASE)
+    content = re.sub(r'^(#+)(?=[A-Za-z0-9])', r'\1 ', content, flags=re.MULTILINE)
+    return content
 
 def main():
     repo_root = os.path.abspath(os.getcwd())
@@ -100,67 +128,38 @@ def main():
     os.makedirs(output_dir, exist_ok=True)
     build_temp = tempfile.mkdtemp()
     
-    print(f"Build Mode: A4 KDP Paperback (210x297mm)\nTemp: {build_temp}")
+    try:
+        prepared_files = []
+        file_counter = 0
 
-    parts_structure = [
-        "Part I - Computer Fundamentals",
-        "Part II - Internet Safety & Cybersecurity",
-        "Part III - Computer Maintenance & Care",
-        "Part V - Networking & Connectivity",
-        "Part VI - Account Management & Recovery",
-        "Part VII - Practical Tips & Advanced Basics",
-        "Appendices"
-    ]
+        for part in PARTS:
+            file_counter += 1
+            path = os.path.join(build_temp, f"{file_counter:03d}_Divider.md")
+            with open(path, 'w', encoding='utf-8') as f:
+                f.write(f"\n\\newpage\n\n# {part['title']}\n\n*{part['subtitle']}*\n\n\\newpage\n\n")
+            prepared_files.append(path)
 
-    prepared_files = []
-    file_counter = 0
+            for ch_path in part["chapters"]:
+                src = os.path.join(repo_root, ch_path)
+                if not os.path.exists(src): continue
+                with open(src, 'r', encoding='utf-8-sig', errors='replace') as f:
+                    content = preprocess_markdown(f.read()) + "\n\n"
+                file_counter += 1
+                dest = os.path.join(build_temp, f"{file_counter:03d}_{os.path.basename(ch_path)}")
+                with open(dest, 'w', encoding='utf-8') as f:
+                    f.write(content)
+                prepared_files.append(dest)
 
-    for part_name in parts_structure:
-        part_path = os.path.join(repo_root, part_name)
-        if not os.path.exists(part_path): continue
+        header_path = os.path.join(build_temp, "header.tex")
+        with open(header_path, 'w', encoding='utf-8') as f: f.write(LATEX_HEADER)
         
-        for root, dirs, files in os.walk(part_path):
-            for file in sorted(files):
-                if file.endswith(".md"):
-                    file_counter += 1
-                    src_path = os.path.join(root, file)
-                    with open(src_path, 'r', encoding='utf-8') as f:
-                        content = preprocess_markdown(f.read())
-                    
-                    dest_path = os.path.join(build_temp, f"{file_counter:03d}_{file}")
-                    with open(dest_path, 'w', encoding='utf-8') as f:
-                        f.write(content)
-                    prepared_files.append(dest_path)
-                    print(f"  + Prepared: {file}")
+        output_pdf = os.path.join(output_dir, PDF_OUTPUT)
+        cmd = ["pandoc", *prepared_files, "-f", "markdown-yaml_metadata_block", "--pdf-engine=xelatex", f"--resource-path={repo_root}", "-H", header_path, "--toc", "--top-level-division=chapter", "-V", "documentclass=book", "-V", "classoption=openany", "--dpi=300", "-o", output_pdf]
+        subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8', errors='replace')
+        print(f"SUCCESS: {output_pdf}")
 
-    header_path = os.path.join(build_temp, "header.tex")
-    with open(header_path, 'w', encoding='utf-8') as f: f.write(LATEX_HEADER)
-    
-    output_pdf = os.path.join(output_dir, PDF_OUTPUT)
-    print("\n>> Running Pandoc/XeLaTeX Build...")
-    
-    cmd = [
-        "pandoc", *prepared_files,
-        "-M", f'title={BOOK_TITLE}',
-        "-M", f'author={BOOK_AUTHOR}',
-        "--pdf-engine=xelatex",
-        f"--resource-path={repo_root}",
-        "-H", header_path,
-        "--toc",
-        "--top-level-division=chapter",
-        "-V", "documentclass=book",
-        "-V", "classoption=openany",
-        "--dpi=300",
-        "-o", output_pdf
-    ]
-
-    result = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8', errors='replace')
-    
-    if result.returncode != 0:
-        print("\nBUILD FAILED!")
-        print(result.stderr)
-    else:
-        print(f"\nSUCCESS! A4 PDF created at:\n{output_pdf}")
+    finally:
+        shutil.rmtree(build_temp, ignore_errors=True)
 
 if __name__ == "__main__":
     main()
