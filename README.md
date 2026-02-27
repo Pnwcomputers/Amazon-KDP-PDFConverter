@@ -1,21 +1,22 @@
-# 📘 Amazon KDP PDF Conversion Python Script (Size A4)
+# 📘 KDP Paperback PDF Build Script (Pandoc + XeLaTeX)
 
-## 🧱 Print-Ready PDF Pipeline (Pandoc + XeLaTeX)
-### Compiles a multi-part Markdown book into an Amazon KDP-friendly **A4 (210×297mm)** paperback PDF
+## 🧱 Print-Ready PDF Pipeline
+### Compiles a multi-part Markdown book into an Amazon KDP-compliant paperback PDF
 #### Built for real-world publishing pain: margins, image scaling, code overflow, and deterministic chapter ordering
+
 ---
 
 ## 🎯 START HERE
 
-### ✅ **What this repo does**
-This repo contains a Python build script that:
-- Collects Markdown chapters from your book folder structure
-- Preprocesses Markdown to reduce PDF/KDP formatting failures
-- Builds a single **A4 paperback-ready PDF** using **Pandoc + XeLaTeX**
+### ✅ What this repo does
+This repo contains a Python build script (`build_book_template.py`) that:
+- Collects Markdown chapters from your book's folder structure
+- Preprocesses Markdown to prevent common KDP/PDF formatting failures
+- Builds a single print-ready PDF using **Pandoc + XeLaTeX**
 - Outputs your final PDF to `./build/`
 
 ### 📄 Output file
-- `build/Book_Name.pdf`
+- `build/Your_Book_KDP.pdf` *(filename set by `PDF_OUTPUT` in the script)*
 
 ---
 
@@ -24,249 +25,300 @@ This repo contains a Python build script that:
 ### 1) Install dependencies
 You need:
 - **Python 3.8+**
-- **Pandoc**
-- **XeLaTeX** (via MiKTeX / TeX Live / MacTeX)
+- **Pandoc** — https://pandoc.org
+- **XeLaTeX** (via MiKTeX, TeX Live, or MacTeX)
 
-### 2) Run the build (from repo root)
+### 2) Configure the script
+Open `build_book_template.py` and fill in the configuration section at the top. At minimum, set:
+
+~~~python
+# Tool paths
+PANDOC_BIN   = r"C:\Program Files\Pandoc\pandoc.exe"       # or "pandoc" on Linux/macOS
+XELATEX_BIN  = r"C:\Program Files\MiKTeX\miktex\bin\x64\xelatex.exe"  # or "xelatex"
+
+# Book metadata
+BOOK_TITLE    = "Your Book Title"
+BOOK_SUBTITLE = "A Descriptive Subtitle"
+BOOK_AUTHOR   = "Author Name"
+BOOK_YEAR     = "2025"
+PDF_OUTPUT    = "Your_Book_KDP.pdf"
+
+# Page size and margins (defaults are 8.5x11 with KDP-safe margins)
+PAPER_WIDTH   = "8.5in"
+PAPER_HEIGHT  = "11in"
+
+# Define your parts/chapters (see BOOK STRUCTURE section below)
+PARTS = [...]
+APPENDICES = [...]
+~~~
+
+### 3) Run the build (from repo root)
 ~~~bash
-python3 build_a4_kdp.py
+python3 build_book_template.py
 ~~~
 
 Windows alternative:
 ~~~powershell
-py build_a4_kdp.py
+py build_book_template.py
 ~~~
 
-Expected console output includes:
-- `Build Mode: A4 KDP Paperback (210x297mm)`
-- `+ Prepared: <chapter.md>`
-- `>> Running Pandoc/XeLaTeX Build...`
-- `SUCCESS! A4 PDF created at: build/PDF_Book_Name.pdf`
+Expected console output:
+- `Build Mode: 8.5x11 KDP Paperback`
+- `+ Chapter 1 - Introduction.md`
+- `>> Building PDF via Pandoc + XeLaTeX...`
+- `BUILD COMPLETE: build/Your_Book_KDP.pdf`
 
 ---
 
-## 🗂️ REQUIRED REPO STRUCTURE
+## 🗂️ BOOK STRUCTURE
 
-The script searches these folders at the repo root (exact names):
+### Folder layout
+The script auto-discovers `.md` files inside whatever part folders you define in `PARTS`. A typical layout looks like this:
 
-- `Chapter 1`
-- `PDF_Book_Name`
-- `Chapter 2`
-- `Chapter 3`
-- `Chapter 4`
-- `Appendices`
+~~~text
+/
+├── Part I - Introduction/
+│   ├── Chapter 1 - Getting Started.md
+│   └── Chapter 2 - Core Concepts.md
+├── Part II - Core Topics/
+│   ├── Chapter 3 - Topic A.md
+│   └── Chapter 4 - Topic B.md
+├── Part III - Advanced Topics/
+│   └── Chapter 5 - Deep Dive.md
+├── Appendices/
+│   ├── AppendixA-Reference.md
+│   └── AppendixB-Glossary.md
+├── images/
+│   └── diagram.png
+├── build/              ← generated PDF appears here
+└── build_book_template.py
+~~~
 
-### 📌 How files are collected
+### Defining your parts in the script
+Edit the `PARTS` list to match your actual folder names:
+
+~~~python
+PARTS = [
+    {
+        "folder":   "Part I - Introduction",       # folder name on disk
+        "title":    "Part I: Introduction",         # printed in the PDF
+        "subtitle": "Overview and foundational concepts.",
+    },
+    {
+        "folder":   "Part II - Core Topics",
+        "title":    "Part II: Core Topics",
+        "subtitle": "The main body of the book.",
+    },
+    # Add or remove parts as needed
+]
+
+APPENDICES = [
+    "Appendices/AppendixA-Reference.md",
+    "Appendices/AppendixB-Glossary.md",
+    # Set to [] if your book has no appendices
+]
+~~~
+
+### How files are collected
 - Recursively scans each part folder
 - Includes `*.md` files only
-- Sorts filenames alphabetically within each folder tree
-- Prefixes prepared files with a counter (`001_`, `002_`, etc.) to force deterministic order in Pandoc
+- Sorts filenames using natural ordering (so `Chapter 2` comes before `Chapter 10`)
+- Prefixes prepared files with a counter (`001_`, `002_`, etc.) to enforce deterministic order in Pandoc
 
-Example:
-~~~text
-Chapter 1/
-  001_Intro.md
-  010_Info.md
-PDF_Book_Name/
-  Name_of_the_Book.md
-Appendices/
-  A_Appendix.md
-images/
-  diagram.png
-build_a4_kdp.py
-~~~
+**Tip:** Use numeric prefixes in your filenames (e.g., `001_Intro.md`, `010_Core.md`) to lock the sort order regardless of filename wording.
 
 ---
 
 ## 🧠 WHAT THE SCRIPT DOES (UNDER THE HOOD)
 
-### ✅ Stage 1 — Preprocess Markdown (KDP/PDF hardening)
-The function `preprocess_markdown()` performs:
+### Stage 1 — Preprocess Markdown (KDP/PDF hardening)
+The `preprocess_markdown()` function runs before Pandoc and handles:
 
-#### 1) YAML Frontmatter Neutralization
-Any line that is exactly:
-- `---`
+#### 1) YAML Frontmatter Stripping
+Genuine YAML frontmatter blocks (those containing `key: value` pairs) are stripped so Pandoc doesn't get confused by per-file metadata. Decorative `---` divider lines are also removed — Pandoc misinterprets them as table-row separators, which causes the "narrow column" layout bug.
 
-Gets replaced with:
-- `***`
+#### 2) HTML `<img>` → Markdown image conversion
+~~~html
+<img src="images/foo.png">
+~~~
+becomes:
+~~~markdown
+![](images/foo.png)
+~~~
 
-This prevents Pandoc from interpreting unintended YAML frontmatter boundaries.
-
-#### 2) HTML <img> → Markdown image conversion
-Example:
-- `<img src="images/foo.png">`
-
-Becomes:
-- `![](images/foo.png)`
-
-#### 3) Image path normalization (critical)
-For Markdown images:
-- `![Alt](../../images/My%20Image.png)`
-
+#### 3) Image path normalization
+For images like:
+~~~markdown
+![Alt](../../images/My%20Image.png)
+~~~
 The script:
 - URL-decodes `%20` → space
-- strips leading `../` segments so lookup becomes repo-root relative
-- removes leading `/`
+- Strips leading `../` segments so the path resolves relative to the repo root
+- Removes any leading `/`
 
 Result:
-- `![Alt](images/My Image.png)`
+~~~markdown
+![Alt](images/My Image.png)
+~~~
 
 #### 4) Zero-width space removal
-Removes:
-- `\u200B`
+Strips `\u200B` characters — KDP flags these as non-printable markup.
 
-#### 5) Code block hard-wrapping
-Inside fenced code blocks, lines longer than ~75 characters are hard-wrapped to reduce page overflow.
+#### 5) Internal `.md` cross-link conversion
+Links like `[Chapter 4](../../Part II/Chapter4.md)` are meaningless in a print PDF and render as broken hyperlinks. They are replaced with bold text: `**Chapter 4**`.
+
+#### 6) Heading normalization
+Chapter and Appendix headings that are incorrectly set as H2+ are promoted to H1 to ensure correct PDF structure and table of contents generation.
+
+#### 7) Code block hard-wrapping
+Lines inside fenced code blocks that exceed ~75 characters are hard-wrapped before Pandoc sees them — the primary defense against code overflowing into the right margin.
 
 ---
 
-## 🧾 PDF BUILD CONFIGURATION
+## ⚙️ CONFIGURATION REFERENCE
 
-### 📕 Book metadata
-Set in the script:
-- `BOOK_TITLE`
-- `BOOK_AUTHOR`
-- `PDF_OUTPUT`
+### Book metadata
+| Variable | Description |
+|---|---|
+| `BOOK_TITLE` | Title printed on the cover and in headers |
+| `BOOK_SUBTITLE` | Subtitle (appears on title page) |
+| `BOOK_AUTHOR` | Author name |
+| `BOOK_YEAR` | Copyright year |
+| `PDF_OUTPUT` | Output filename inside `./build/` |
 
-Defaults:
-- `BOOK_TITLE = "The Book's Title"`
-- `BOOK_AUTHOR = "Jon-Eric Pienkowski"`
-- `PDF_OUTPUT = "PDF_Book_Name.pdf"`
+### Page geometry
+Defaults are set for **8.5×11 in (US Letter)** with margins that meet KDP minimums for 301–500 page books. Change `PAPER_WIDTH` / `PAPER_HEIGHT` and the margin variables for other trim sizes (e.g., A4, 6×9).
 
-### 📐 KDP A4 geometry (210mm × 297mm)
-Margins set in the script:
-- `INNER_MARGIN = "25mm"`
-- `OUTER_MARGIN = "20mm"`
-- `TOP_BOTTOM = "20mm"`
+| Variable | Default | KDP Minimum |
+|---|---|---|
+| `INNER_MARGIN` (gutter) | `1in` | 0.625in |
+| `OUTER_MARGIN` | `0.75in` | 0.25in |
+| `TOP_MARGIN` | `1in` | 0.25in |
+| `BOTTOM_MARGIN` | `0.75in` | 0.25in |
 
-If KDP preview complains about margins or bleed, these are your first knobs to turn.
+KDP margin requirements vary by page count and trim size. Always verify at: https://kdp.amazon.com/en_US/help/topic/G201834190
 
-### 🧷 LaTeX safety features included
-Injected via `header.tex`:
-- `geometry` configured for exact A4
-- `fancyhdr` headers (title + page)
-- image constraint rules (max width/height with aspect ratio)
-- figure locking to reduce float chaos
-- code wrapping and sloppy stretch to reduce overfull boxes
+### Fonts
+| Variable | Default | Notes |
+|---|---|---|
+| `MAIN_FONT` | `Cambria` | Body text — try `Georgia`, `EB Garamond` |
+| `SANS_FONT` | `Calibri` | Headings — try `Arial`, `Open Sans` |
+| `MONO_FONT` | `Consolas` | Code blocks — try `Fira Code`, `Courier New` |
+
+Fonts must be installed on your system. XeLaTeX embeds them automatically.
 
 ---
 
 ## 🖼️ IMAGES: HOW TO NOT GET BURNED
 
-Pandoc runs with:
-- `--resource-path=<repo_root>`
-
-So image references should resolve from the repo root.
+Pandoc runs with `--resource-path=<repo_root>`, so image references should resolve from the repo root.
 
 ### ✅ Recommended image patterns
-- `![Alt](images/diagram.png)`
-- `![Alt](PDF_Book_Name/images/picture.png)`
+~~~markdown
+![Alt text](images/diagram.png)
+![Alt text](Part I - Introduction/images/picture.png)
+~~~
 
-### 🚫 Avoid (if you can)
+### 🚫 Avoid if possible
 - Absolute paths like `/images/foo.png`
-- Deep relative paths like `../../../images/foo.png` (the script attempts to rewrite these, but correctness depends on your real layout)
+- Deep relative paths like `../../../images/foo.png` *(the script attempts to rewrite these, but correctness depends on your actual folder layout)*
+
+### Image size limits
+The script caps images in LaTeX to prevent KDP margin violations:
+- **Width:** max 80% of text width
+- **Height:** max 35% of text height (~3.2in on 8.5×11)
+
+This leaves room for the caption, float spacing, and surrounding text on the same page.
 
 ---
 
-## 🧯 TROUBLESHOOTING (COMMON FAILURES)
+## 🧯 TROUBLESHOOTING
 
 ### ❌ `pandoc: command not found`
-Cause: Pandoc not installed or not on PATH.
-
-Fix:
-- Install Pandoc
-- Reopen terminal
-- Verify:
+Pandoc is not installed or not on PATH.
 ~~~bash
-pandoc --version
+pandoc --version    # verify installation
 ~~~
+Reinstall from https://pandoc.org and reopen your terminal.
 
 ### ❌ `xelatex not found` / LaTeX package errors
-Cause: TeX distribution missing or incomplete.
-
-Fix:
-- Install MiKTeX / TeX Live / MacTeX
-- Verify:
+TeX distribution missing or incomplete.
 ~~~bash
-xelatex --version
+xelatex --version   # verify installation
 ~~~
-- If MiKTeX prompts for missing packages, allow install (or install manually)
+Install MiKTeX / TeX Live / MacTeX. If MiKTeX prompts for missing packages during the build, allow the install (or pre-install the packages manually).
 
-### ❌ Images missing in the PDF
-Fix checklist:
-- Confirm the image file exists where the Markdown ultimately points (repo-root relative)
-- Watch for filename mismatches (case sensitivity on Linux/macOS)
-- Avoid weird characters in filenames when possible
-- Ensure spaces are handled consistently (`%20` decoding is supported)
+### ❌ A part folder is skipped with `[!] WARNING: Folder not found`
+The `"folder"` value in your `PARTS` list doesn't match the actual folder name on disk. Folder names are case-sensitive on Linux/macOS.
 
-### ❌ KDP warns: “Text/Image outside margins”
-Likely causes:
-- an image is too large
-- a table is too wide
-- a long unbroken string (URLs, hashes, code, base64) is overflowing
+### ❌ Images missing from the PDF
+- Confirm the image file exists at the repo-root-relative path the Markdown references
+- Watch for case mismatches in filenames (Linux/macOS are case-sensitive)
+- Avoid unusual characters in filenames when possible
+- `%20`-encoded spaces are decoded automatically
 
-Fixes:
-- reduce image dimensions at source
-- manually break long URLs/strings in Markdown
-- simplify tables or convert to multi-line lists
-- keep code examples reasonably line-limited
+### ❌ KDP preview says "Text/Image outside margins"
+Likely causes and fixes:
+- **Image too large** — reduce source image dimensions, or lower the `maxheight`/`maxwidth` percentages in `LATEX_HEADER`
+- **Table too wide** — simplify or convert to a list
+- **Long unbroken string** (URL, hash, base64, long variable name) — manually break it in Markdown, or add a `\linebreak` hint
 
 ---
 
 ## 📦 BUILD ARTIFACTS
 
-- Final PDF:
-  - `./build/PDF_Book_Name.pdf`
-- Temporary build directory:
-  - created automatically (contains prepared Markdown + `header.tex`)
-  - location is printed during build
+| Path | Description |
+|---|---|
+| `./build/Your_Book_KDP.pdf` | Final output PDF |
+| Temp directory (printed during build) | Prepared Markdown files + `header.tex` — deleted automatically after build |
 
 ---
 
-## 🧪 ADVANCED NOTES (OPTIONAL)
+## 🧪 ADVANCED NOTES
 
-### Deterministic ordering
-Folder order is hard-coded in `parts_structure`. Within each part, files are sorted alphabetically.
-Recommendation:
-- Use numeric prefixes in filenames (e.g., `001_`, `010_`, `120_`) to lock order forever.
+### Deterministic chapter ordering
+The script sorts files using natural ordering (so `Chapter 2` correctly precedes `Chapter 10`). To lock order unconditionally, use numeric prefixes in your filenames: `001_Intro.md`, `010_Core.md`, `120_Advanced.md`.
 
-### Font handling
-XeLaTeX is used for better font support and fewer Unicode headaches than pdfLaTeX.
+### Why XeLaTeX?
+XeLaTeX handles Unicode and system fonts far more reliably than pdfLaTeX, which matters for books with special characters, non-Latin scripts, or modern font choices.
+
+### Changing trim size (e.g., A4, 6×9)
+Update `PAPER_WIDTH`, `PAPER_HEIGHT`, and the margin variables. Then verify KDP's margin requirements for that trim size and page count range before uploading.
+
+### geometry is loaded once
+`geometry` is passed exclusively through Pandoc's `-V` flags — it is not loaded in `LATEX_HEADER`. This prevents the double-loading conflict that causes cryptic LaTeX errors.
 
 ---
 
 ## ⚖️ LEGAL / PUBLISHING DISCLAIMER
 
-This build pipeline produces a PDF. You are responsible for:
-- verifying layout in KDP Preview
-- ensuring you have rights to all included content (text/images)
-- complying with Amazon KDP print requirements
+This build pipeline produces a PDF file. You are responsible for:
+- Verifying layout in KDP Preview before publishing
+- Ensuring you have rights to all included content (text and images)
+- Complying with Amazon KDP print publishing requirements
 
 ---
 
 ## 🙏 CREDITS
 
-### 🧰 Toolchain
-- **Pandoc** — Markdown-to-PDF conversion engine
+### Toolchain
+- **Pandoc** — Markdown-to-LaTeX-to-PDF conversion engine
 - **XeLaTeX** — Unicode-friendly LaTeX engine
-- **LaTeX packages** used include:
-  - `geometry`, `graphicx`, `fancyhdr`, `longtable`, `booktabs`, `fvextra`, `float`
 
----
-
-## 👤 AUTHOR
-
-- Jon-Eric Pienkowski
-- Pacific Northwest Computers
+### LaTeX packages used
+`geometry`, `graphicx`, `fancyhdr`, `longtable`, `booktabs`, `fvextra`, `float`, `placeins`, `caption`, `xurl`
 
 ---
 
 ## ✅ TL;DR
 
-1) Put your chapters into the required Part folders  
-2) Run:
+1. Set your book metadata, font choices, page size, and folder structure in the script
+2. Put your chapter Markdown files into the folders you defined in `PARTS`
+3. Run:
 ~~~bash
-python3 build_a4_kdp.py
+python3 build_book_template.py
 ~~~
-3) Grab your PDF here:
-- `build/The_Name.pdf`
+4. Grab your PDF:
+~~~text
+build/Your_Book_KDP.pdf
+~~~
